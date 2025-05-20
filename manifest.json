@@ -1,26 +1,29 @@
 {
   "name": "Website Analyzer",
+  "manifest_version": 3,
   "version": "0.2",
   "description": "Analyze selected text using OpenAI GPT-4o API",
-  "manifest_version": 3,
+
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["analyzer_openai_user.js"]
     }
   ],
+
   "permissions": [
     "activeTab",
-    "storage",
+    "storage"
+  ],
+
+  "host_permissions": [
     "https://api.openai.com/*"
   ],
+
   "web_accessible_resources": [
     {
-      "resources": [
-        "analyzer_openai_user.js"
-      ],
+      "resources": ["analyzer_openai_user.js"],
       "matches": ["<all_urls>"]
     }
   ]
-  
 }
