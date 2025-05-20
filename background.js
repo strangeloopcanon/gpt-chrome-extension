@@ -1,26 +1,32 @@
+import { analyzeText } from './analyzer_openai_user.js';
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
-    id: "analyze-selection",
-    title: "Analyze with OpenAI",
+    id: "analyze-with-gemini",
+    title: "Analyze with Gemini",
     contexts: ["selection"]
   });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== "analyze-selection") return;
-  const prompt = info.selectionText;
+  if (info.menuItemId !== "analyze-with-gemini" || !info.selectionText) return;
 
-  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer YOUR_KEY",
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }]
-    })
-  }).then(r => r.json());
-
-  chrome.tabs.sendMessage(tab.id, { type: "openai-result", data: resp });
+  try {
+    const analysisResult = await analyzeText(info.selectionText);
+    if (tab.id) {
+      chrome.tabs.sendMessage(tab.id, { type: "gemini-result", data: analysisResult });
+    } else {
+      // Fallback if tab.id is somehow undefined, though unlikely here.
+      console.error("Tab ID is missing, cannot send message.");
+      alert("Analysis (no tab ID): " + analysisResult); // Fallback alert
+    }
+  } catch (error) {
+    console.error("Error during analysis or sending message:", error);
+    const errorMessage = error.message || "Failed to analyze text or send message.";
+    if (tab.id) {
+        chrome.tabs.sendMessage(tab.id, { type: "gemini-error", data: errorMessage });
+    } else {
+        alert("Error (no tab ID): " + errorMessage); // Fallback alert
+    }
+  }
 });

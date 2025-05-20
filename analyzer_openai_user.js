@@ -15,93 +15,67 @@ export async function getApiKey() {
       reject('chrome.storage unavailable');
       return;
     }
-    chrome.storage.local.get('openaiApiKey', (result) => {
-      if (result.openaiApiKey) {
-        resolve(result.openaiApiKey);
+    chrome.storage.local.get('googleApiKey', (result) => {
+      if (result.googleApiKey) {
+        resolve(result.googleApiKey);
       } else {
-        const key = prompt('Enter your OpenAI API key:');
-        if (key) {
-          chrome.storage.local.set({ openaiApiKey: key }, () => resolve(key));
-        } else {
-          reject('API key not provided');
-        }
+        // prompt() is not available in Service Workers.
+        // Reject if the key is not found. An options page is the proper long-term solution.
+        reject('Google API key not set. Please open the extension options and set your API key.');
       }
     });
   });
 }
 
 export async function analyzeText(text) {
-  const apiUrl = 'https://api.openai.com/v1/chat/completions';
-  const key = await getApiKey();
+  const apiKey = await getApiKey();
+  // Using gemini-1.5-flash-latest as a robust choice. We can also try specific versions like "gemini-2.0-flash" if needed.
+  const modelName = 'gemini-2.0-flash'; 
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+  const systemPrompt = 'You are a versatile intellect and expert teacher with comprehensive mastery across all present-day domains of human wisdom, notably in economics, finance, technology, history, literature, and philosophy. You have an ability to discern relationships among concepts and fields that elude others. With that in mind, please explain and analyze the given text.';
+
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          { text: text }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      // maxOutputTokens: 8192, // Optional: Adjust if needed
+    },
+    // system_instruction is available for newer models, check compatibility if issues arise.
+    // For gemini-1.5-flash, system instructions are supported.
+    system_instruction: {
+        parts: [ { text: systemPrompt } ]
+    }
+  };
+
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`,
     },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are ScholarGPT, a versatile intellect and expert teacher with comprehensive mastery across all present-day domains of human wisdom, notably in economics, finance, technology, history, literature, and philosophy. You have an ability to discern relationships among concepts and fields that elude others. With that in mind, please explain and analyze the given text.',
-        },
-        { role: 'user', content: text },
-      ],
-      temperature: 0.1,
-    }),
+    body: JSON.stringify(requestBody),
   });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
+  }
+
   const data = await response.json();
-  if (data.choices && data.choices[0] && data.choices[0].message) {
-    return data.choices[0].message.content.trim();
+
+  if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) {
+    return data.candidates[0].content.parts[0].text.trim();
+  } else if (data.promptFeedback && data.promptFeedback.blockReason) {
+    console.error("Analysis blocked by API:", data.promptFeedback);
+    throw new Error(`Analysis blocked: ${data.promptFeedback.blockReason}${data.promptFeedback.blockReasonMessage ? ' - ' + data.promptFeedback.blockReasonMessage : ''}. Check safety settings if applicable.`);
   } else {
-    throw new Error('Unable to analyze the selected text.');
+    console.error("Unexpected API response structure:", data);
+    throw new Error('Unable to analyze the selected text due to unexpected API response.');
   }
 }
-
-  
-  function createFloatingButton() {
-    const button = document.createElement('button');
-    button.id = 'analyzer-floating-button';
-    button.innerText = 'Analyze with OpenAI';
-    button.style.display = 'none';
-    button.style.position = 'absolute';
-    button.style.zIndex = '9999';
-    button.style.backgroundColor = 'rgba(100, 100, 255, 0.8)';
-    button.style.color = 'white';
-    button.style.border = 'none';
-    button.style.borderRadius = '5px';
-    button.style.padding = '5px 10px';
-    button.style.cursor = 'pointer';
-    button.addEventListener('click', (event) => {
-      event.stopPropagation();
-      const selectedText = window.getSelection().toString();
-      if (selectedText) {
-        analyzeText(selectedText);
-      }
-    });
-  
-    document.body.appendChild(button);
-  
-    document.addEventListener('mouseup', () => {
-      const selectedText = window.getSelection().toString();
-      if (selectedText) {
-        const range = window.getSelection().getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        button.style.display = 'block';
-        button.style.left = `${rect.left + window.scrollX}px`;
-        button.style.top = `${rect.top + rect.height + window.scrollY}px`;
-      } else {
-        button.style.display = 'none';
-      }
-    });
-  
-    document.addEventListener('mousedown', (event) => {
-      if (event.target !== button) {
-        button.style.display = 'none';
-      }
-    });
-  }
-  
-  createFloatingButton();
-  

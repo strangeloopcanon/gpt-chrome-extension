@@ -2,7 +2,7 @@
   "name": "Website Analyzer",
   "manifest_version": 3,
   "version": "0.2",
-  "description": "Analyze selected text using OpenAI GPT-4o",
+  "description": "Analyze selected text using Google Gemini API",
 
   "permissions": [
     "contextMenus",
@@ -12,7 +12,7 @@
   ],
 
   "host_permissions": [
-    "https://api.openai.com/*"
+    "https://generativelanguage.googleapis.com/*"
   ],
 
   "background": {
@@ -20,15 +20,20 @@
     "type": "module"
   },
 
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]          // <-- DOM code lives here
+      "js": ["content.js"]
     }
   ],
 
   "content_security_policy": {
     "extension_pages":
-      "script-src 'self'; object-src 'self'; connect-src 'self' https://api.openai.com"
+      "script-src 'self'; object-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com"
   }
 }
