@@ -9,7 +9,7 @@
 // @grant        GM_addStyle
 // ==/UserScript==
 
-function getApiKey() {
+export async function getApiKey() {
   return new Promise((resolve, reject) => {
     if (!chrome.storage) {
       reject('chrome.storage unavailable');
@@ -30,25 +30,19 @@ function getApiKey() {
   });
 }
 
-function analyzeText(text) {
+export async function analyzeText(text) {
   const apiUrl = 'https://api.openai.com/v1/chat/completions';
-
-  const button = document.getElementById('analyzer-floating-button');
-  button.innerText = 'Analyzing...';
-  button.disabled = true;
-
-  getApiKey()
-    .then((key) =>
-      fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
-            {
+  const key = await getApiKey();
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [
+        {
           role: 'system',
           content: 'You are ScholarGPT, a versatile intellect and expert teacher with comprehensive mastery across all present-day domains of human wisdom, notably in economics, finance, technology, history, literature, and philosophy. You have an ability to discern relationships among concepts and fields that elude others. With that in mind, please explain and analyze the given text.',
         },
@@ -56,24 +50,13 @@ function analyzeText(text) {
       ],
       temperature: 0.1,
     }),
-        })
-      )
-    )
-    .then((response) => response.json())
-    .then((data) => {
-      button.innerText = 'Analyze with OpenAI';
-      button.disabled = false;
-      if (data.choices && data.choices[0] && data.choices[0].message) {
-        alert('Analysis: ' + data.choices[0].message.content.trim());
-      } else {
-        alert('Error: Unable to analyze the selected text.');
-      }
-    })
-    .catch(() => {
-      button.innerText = 'Analyze with OpenAI';
-      button.disabled = false;
-      alert('Error: Failed to connect to the OpenAI API.');
-    });
+  });
+  const data = await response.json();
+  if (data.choices && data.choices[0] && data.choices[0].message) {
+    return data.choices[0].message.content.trim();
+  } else {
+    throw new Error('Unable to analyze the selected text.');
+  }
 }
 
   

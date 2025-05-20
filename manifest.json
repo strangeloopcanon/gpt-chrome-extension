@@ -2,17 +2,12 @@
   "name": "Website Analyzer",
   "manifest_version": 3,
   "version": "0.2",
-  "description": "Analyze selected text using OpenAI GPT-4o API",
-
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["analyzer_openai_user.js"]
-    }
-  ],
+  "description": "Analyze selected text using OpenAI GPT-4o",
 
   "permissions": [
+    "contextMenus",
     "activeTab",
+    "scripting",
     "storage"
   ],
 
@@ -20,10 +15,20 @@
     "https://api.openai.com/*"
   ],
 
-  "web_accessible_resources": [
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
     {
-      "resources": ["analyzer_openai_user.js"],
-      "matches": ["<all_urls>"]
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]          // <-- DOM code lives here
     }
-  ]
+  ],
+
+  "content_security_policy": {
+    "extension_pages":
+      "script-src 'self'; object-src 'self'; connect-src 'self' https://api.openai.com"
+  }
 }
