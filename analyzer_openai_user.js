@@ -1,45 +1,79 @@
 // ==UserScript==
 // @name         Website Analyzer
 // @namespace    http --- xxxx
-// @version      0.1
-// @description  Analyze selected text using OpenAI Completion API
+// @version      0.2
+// @description  Analyze selected text using OpenAI GPT-4o API
 // @author       Rohit Krishnan
 // @match        *://*/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // ==/UserScript==
 
+function getApiKey() {
+  return new Promise((resolve, reject) => {
+    if (!chrome.storage) {
+      reject('chrome.storage unavailable');
+      return;
+    }
+    chrome.storage.local.get('openaiApiKey', (result) => {
+      if (result.openaiApiKey) {
+        resolve(result.openaiApiKey);
+      } else {
+        const key = prompt('Enter your OpenAI API key:');
+        if (key) {
+          chrome.storage.local.set({ openaiApiKey: key }, () => resolve(key));
+        } else {
+          reject('API key not provided');
+        }
+      }
+    });
+  });
+}
+
 function analyzeText(text) {
-  console.log("here");
-  const apiUrl = 'https://gptsearch-5wrc8nejq-marquisdepolis.vercel.app/';
+  const apiUrl = 'https://api.openai.com/v1/chat/completions';
 
   const button = document.getElementById('analyzer-floating-button');
-  button.innerHTML = '<span class="spinner"></span>';
+  button.innerText = 'Analyzing...';
   button.disabled = true;
 
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', apiUrl);
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.onload = function () {
-    button.innerText = 'Analyze with OpenAI';
-    button.disabled = false;
-    const data = JSON.parse(xhr.responseText);
-    if (data.content) {
-      alert('Analysis: ' + data.content);
-    } else {
-      alert('Error: Unable to analyze the selected text.');
-    }
-  };
-  xhr.onerror = function () {
-    button.innerText = 'Analyze with OpenAI';
-    button.disabled = false;
-    alert('Error: Failed to connect to the backend.');
-  };
-  xhr.send(JSON.stringify({
-    prompt: `You are ScholarGPT, a versatile intellect and expert teacher with comprehensive mastery across all present-day domains of human wisdom, notably in economics, finance, technology, history, literature, and philosophy. You have an ability to discern relationships among concepts and fields that elude others. With that in mind, please explain and analyze this text: "${text}"`,
-    model: "gpt-3.5-Turbo",
-    temperature: 0.1,
-  }));
+  getApiKey()
+    .then((key) =>
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            {
+          role: 'system',
+          content: 'You are ScholarGPT, a versatile intellect and expert teacher with comprehensive mastery across all present-day domains of human wisdom, notably in economics, finance, technology, history, literature, and philosophy. You have an ability to discern relationships among concepts and fields that elude others. With that in mind, please explain and analyze the given text.',
+        },
+        { role: 'user', content: text },
+      ],
+      temperature: 0.1,
+    }),
+        })
+      )
+    )
+    .then((response) => response.json())
+    .then((data) => {
+      button.innerText = 'Analyze with OpenAI';
+      button.disabled = false;
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        alert('Analysis: ' + data.choices[0].message.content.trim());
+      } else {
+        alert('Error: Unable to analyze the selected text.');
+      }
+    })
+    .catch(() => {
+      button.innerText = 'Analyze with OpenAI';
+      button.disabled = false;
+      alert('Error: Failed to connect to the OpenAI API.');
+    });
 }
 
   

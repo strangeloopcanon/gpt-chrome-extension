@@ -22,7 +22,5 @@
     "url": "https://github.com/marquisdepolis/gpt-chrome-extension/issues"
   },
   "homepage": "https://github.com/marquisdepolis/gpt-chrome-extension#readme",
-  "dependencies": {
-    "openai": "^3.2.1"
-  }
+  "dependencies": {}
 }

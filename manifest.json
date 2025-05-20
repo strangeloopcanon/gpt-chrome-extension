@@ -1,7 +1,7 @@
 {
   "name": "Website Analyzer",
-  "version": "0.1",
-  "description": "Analyze selected text using OpenAI Completion API",
+  "version": "0.2",
+  "description": "Analyze selected text using OpenAI GPT-4o API",
   "manifest_version": 3,
   "content_scripts": [
     {
@@ -11,6 +11,7 @@
   ],
   "permissions": [
     "activeTab",
+    "storage",
     "https://api.openai.com/*"
   ],
   "web_accessible_resources": [
